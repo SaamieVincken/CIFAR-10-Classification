@@ -46,3 +46,5 @@ def get_device():
         else:
             DEVICE = torch.device('cpu')  # CPU
     return DEVICE
+
+
