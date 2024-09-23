@@ -16,27 +16,6 @@ from setup.data import get_data, get_labels
 from test import validate_model
 from train import train_epoch
 
-# Processing info:
-# devices = tf.config.list_physical_devices()
-# print("\nDevices: ", devices)
-#
-# if torch.backends.mps.is_available():
-#     mps_device = torch.device("mps")
-#     x = torch.ones(1, device=mps_device)
-#     print(x)
-#
-#     start_time = time.time()
-#
-#     # synchronize time with cpu, otherwise only time for dogfooding data to gpu would be measured
-#     torch.mps.synchronize()
-#
-#     a = torch.ones(4000, 4000, device="mps")
-#     for _ in range(200):
-#         a += a
-#
-#     elapsed_time = time.time() - start_time
-#     print("GPU Time: ", elapsed_time)
-
 # Settings for model and fine-tuning
 single_batch = False
 conv_layers = None
@@ -44,26 +23,26 @@ linear_layers = None
 pooling = None
 batch_norm = None
 dropout = 0.5
-learning_rate = 0.001
+learning_rate = 0.01
 momentum = 0.9
 betas = (0.9, 0.99)
 epsilon = 1e-8
-batch_size = 128
-epochs = 5
+batch_size = 32
+epochs = 10
 L2 = 0.0005
 augment = True
 weights_init = 'xavier'
 model_complexity = 'large'
-optimizer = 'adam'
-model = 'resnet-50'
-version = '9.1.3'
+optimizer = 'sgd'
+model = 'resnet-18'
+version = '9.2.6.1'
 
 if __name__ == '__main__':
     # Set up W&B
     wandb_config = get_wandb_config(model, model_complexity, learning_rate, betas, epsilon, conv_layers, linear_layers,
                                     pooling, batch_norm, dropout, L2, weights_init, augment, optimizer)
 
-    wandb.init(project="CIFAR-10-Classification", config=wandb_config, name=version + ' freeze')
+    wandb.init(project="CIFAR-10-Classification", config=wandb_config, name=version + ' resnet18', notes='Same as 9.2.6 but 20 epochs')
 
     # Set up dataset
     traindata, testdata, trainloader, testloader = get_data(batch_size)
@@ -79,22 +58,11 @@ if __name__ == '__main__':
     elif model == 'resnet-50':
         weights = ResNet50_Weights.IMAGENET1K_V1  # Pretrained on imagenet
         model = resnet50(weights=weights)
-        model.fc = nn.Sequential(
-            nn.Linear(model.fc.in_features, 10),  # Adjust the final layer for CIFAR-10
-            nn.Softmax(dim=1)  # Add softmax activation
-        )
-        # weights = ResNet50_Weights.IMAGENET1K_V1  # Pretrained on imagenet
-        # model = resnet50(weights=weights)
-        # model.fc = nn.Linear(model.fc.in_features, len(classes))
-
-    # # Freeze the pretrained weights
-    # for name, param in model.named_parameters():
-    #     if 'fc' not in name:  # except for final fcl
-    #         param.requires_grad = False
+        model.fc = nn.Linear(model.fc.in_features, len(classes))
 
     # Freeze layers selectively
     for name, param in model.named_parameters():
-        if 'fc' not in name and 'layer4' not in name:  # Unfreeze last block
+        if 'fc' not in name and 'layer3' not in name and 'layer4' not in name:
             param.requires_grad = False
 
     # Calculate which parameters to update which are not frozen
@@ -111,11 +79,6 @@ if __name__ == '__main__':
         optimizer = optim.Adam(params_to_update, lr=learning_rate, weight_decay=L2, betas=betas, eps=epsilon)
     else:
         optimizer = optim.SGD(params_to_update, lr=learning_rate, momentum=momentum, weight_decay=L2)
-
-    # Scheduler for updating learning rates (StepLR or ReduceLROnPlateau)
-    # scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=2, gamma=0.1)
-    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)
 
     # Print summary of the model
     model.to(torch.device('cpu'))
@@ -135,9 +98,10 @@ if __name__ == '__main__':
         train_epoch(epoch_count, model, trainloader, optimizer, criterion, device)
         val_epoch_loss, val_epoch_accuracy, val_epoch_precision, val_epoch_recall, val_epoch_f1 =\
             validate_model(epoch, model, testloader, criterion, device)
-        scheduler.step(val_epoch_loss)
         epoch_count += 1
 
-    # Print summary of the model
-    model.to(torch.device('cpu'))
-    print(summary(model, input_size=(3, 32, 32)))
+
+    # scheduler.step()
+    # Scheduler for updating learning rates (StepLR or ReduceLROnPlateau)
+    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)
