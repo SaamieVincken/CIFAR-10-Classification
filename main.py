@@ -4,7 +4,7 @@ from io import StringIO
 import tensorflow as tf
 import torch
 import torch.optim as optim
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR
 from torchvision.models import resnet50, ResNet50_Weights, ResNet18_Weights, resnet18
 from torchsummary import summary
 
@@ -22,27 +22,28 @@ conv_layers = None
 linear_layers = None
 pooling = None
 batch_norm = None
-dropout = 0.5
-learning_rate = 0.01
+dropout = None
+learning_rate = 0.1
 momentum = 0.9
 betas = (0.9, 0.99)
 epsilon = 1e-8
 batch_size = 32
-epochs = 10
+epochs = 20
 L2 = 0.0005
 augment = True
 weights_init = 'xavier'
 model_complexity = 'large'
 optimizer = 'sgd'
 model = 'resnet-18'
-version = '9.2.6.1'
+version = '9.2.6.5'
 
 if __name__ == '__main__':
     # Set up W&B
     wandb_config = get_wandb_config(model, model_complexity, learning_rate, betas, epsilon, conv_layers, linear_layers,
                                     pooling, batch_norm, dropout, L2, weights_init, augment, optimizer)
 
-    wandb.init(project="CIFAR-10-Classification", config=wandb_config, name=version + ' resnet18', notes='Same as 9.2.6 but 20 epochs')
+    wandb.init(project="CIFAR-10-Classification", config=wandb_config, name=version + ' resnet18',
+               notes='Same as 9.2.6 but 10 epochs - color jitter, RandomRotation((-7, 7) - Cosine Annealing Scheduler')
 
     # Set up dataset
     traindata, testdata, trainloader, testloader = get_data(batch_size)
@@ -80,6 +81,8 @@ if __name__ == '__main__':
     else:
         optimizer = optim.SGD(params_to_update, lr=learning_rate, momentum=momentum, weight_decay=L2)
 
+    scheduler = CosineAnnealingLR(optimizer, T_max=epochs)
+    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=3, factor=0.1)
     # Print summary of the model
     model.to(torch.device('cpu'))
     print(summary(model, input_size=(3, 32, 32)))
@@ -96,12 +99,12 @@ if __name__ == '__main__':
     # Training/validation function
     for epoch in range(epochs):
         train_epoch(epoch_count, model, trainloader, optimizer, criterion, device)
-        val_epoch_loss, val_epoch_accuracy, val_epoch_precision, val_epoch_recall, val_epoch_f1 =\
+        val_epoch_loss, val_epoch_accuracy, val_epoch_precision, val_epoch_recall, val_epoch_f1 = \
             validate_model(epoch, model, testloader, criterion, device)
+        scheduler.step()
         epoch_count += 1
 
-
-    # scheduler.step()
-    # Scheduler for updating learning rates (StepLR or ReduceLROnPlateau)
-    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)
+# scheduler.step()
+# Scheduler for updating learning rates (StepLR or ReduceLROnPlateau)
+# scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+# scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)

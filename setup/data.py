@@ -11,6 +11,8 @@ def get_transform(augment=False):
     if augment:
         return transforms.Compose([
             transforms.RandomHorizontalFlip(),
+            torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.3, hue=0.2),
+            transforms.RandomRotation((-7, 7)),
             transforms.ToTensor(),
             # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize to [-1, 1]
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
