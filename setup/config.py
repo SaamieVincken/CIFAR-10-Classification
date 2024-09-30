@@ -6,7 +6,7 @@ DEVICE = None
 
 def get_wandb_config(model='base', model_complexity='base model', learning_rate=None,
                      betas=None, epsilon=None, conv_layers=None, linear_layers=None, pooling=False, batch_norm=False,
-                     dropout=None, L2=None, weights_init=None, data_augmentation=True, optimizer=None):
+                     dropout=None, L2=None, weights_init=None, data_augmentation=True, optimizer=None, scheduler=None):
     # Return all configurations for wandb logging
     return {
         'architecture': 'CNN',
@@ -24,7 +24,8 @@ def get_wandb_config(model='base', model_complexity='base model', learning_rate=
         'L2': L2,
         'weights_init': weights_init,
         'data_augmentation': data_augmentation,
-        'optimizer': optimizer
+        'optimizer': optimizer,
+        'scheduler': scheduler
     }
 
 
