@@ -6,23 +6,31 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import v2 as transforms
 from torchvision.transforms.v2 import RandomCrop
 
+mean, std = [0.4914, 0.4822, 0.4465], [0.247, 0.243, 0.261]
+# These values are mostly used by researchers as found to very useful in fast convergence
+img_size = 224
+crop_size = 224
+
 
 # Convert to PyTorch tensor and normalize between [-1, 1], optional data augmentation
 def get_transform(augment=False):
     if augment:
         return transforms.Compose([
-            transforms.RandomHorizontalFlip(),
-            torchvision.transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.3, hue=0.2),
-            transforms.RandomRotation((-7, 7)),
+            transforms.Resize(img_size),  # , interpolation=torchvision.transforms.InterpolationMode.BICUBIC),
+            # transforms.CenterCrop(crop_size),
+            transforms.RandomRotation(20),
+            transforms.RandomHorizontalFlip(0.1),
+            transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1),
+            transforms.RandomAdjustSharpness(sharpness_factor=2, p=0.1),
             transforms.ToTensor(),
-            # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize to [-1, 1]
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) # Normalization used for imagenet
+            transforms.Normalize(mean, std),
+            transforms.RandomErasing(p=0.75, scale=(0.02, 0.1), value=1.0, inplace=False)
         ])
     else:
         return transforms.Compose([
-            transforms.ToTensor(),  # Convert to tensor
-            # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize to [-1, 1]
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) # Normalization used for imagenet
+            transforms.Resize((img_size, img_size)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
         ])
 
 
