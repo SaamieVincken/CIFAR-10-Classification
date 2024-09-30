@@ -27,8 +27,8 @@ learning_rate = 0.001
 momentum = 0.9
 betas = (0.9, 0.99)
 epsilon = 1e-8
-batch_size = 8
-epochs = 7
+batch_size = 16
+epochs = 2
 L2 = 0.005
 augment = True
 weights_init = None
@@ -68,32 +68,8 @@ if __name__ == '__main__':
         model = resnet50(weights=weights)
         model.fc = nn.Linear(model.fc.in_features, len(classes))
 
-    #
-    # # Optimizer initialization
-    # if optimizer == 'adam':
-    #     optimizer = optim.Adam(params_to_update, lr=learning_rate, weight_decay=L2, betas=betas, eps=epsilon)
-    # elif optimizer == 'adamW':
-    #     optimizer = optim.AdamW(params_to_update, lr=learning_rate, weight_decay=L2)
-    # else:
-    #
-    # # Scheduler initialization
-    # if scheduler == 'CosineAnnealingLR':
-    #     scheduler = CosineAnnealingLR(optimizer, T_max=epochs)
-    # elif scheduler == 'ReduceLROnPlateau':
-    #     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=3, factor=0.1)
-    # elif scheduler == 'OneCycleLR':
-    #     scheduler = OneCycleLR(optimizer, max_lr=learning_rate, steps_per_epoch=len(trainloader), epochs=epochs)
-
-    # Print summary of the model
-    # model.to(torch.device('cpu'))
-    # print(summary(model, input_size=(3, 32, 32)))
-
-    # for name, param in model.named_parameters():
-    # print(f"{name}: {'requires_grad' if param.requires_grad else 'frozen'}")
-
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     model = model.to(device)
-    epoch_count = 0
 
     params_to_update = model.parameters()
     if feature_extract:

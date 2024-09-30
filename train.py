@@ -1,6 +1,5 @@
 import copy
 import time
-
 import torch
 import wandb
 import torchmetrics
@@ -11,8 +10,6 @@ accuracy_metric, precision_metric, recall_metric, f1_metric = get_metrics_config
 
 
 def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, device='cpu'):
-    since = time.time()
-
     val_acc_history = []
 
     best_model_wts = copy.deepcopy(model.state_dict())
@@ -32,15 +29,12 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, device=
 
             # Iterate over data.
             for inputs, labels in dataloaders[phase]:
-                #                 labels= labels.sub(labels,1)
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
 
-                # forward
-                # track history if only in train
                 with torch.set_grad_enabled(phase == 'train'):
 
                     outputs = model(inputs)
