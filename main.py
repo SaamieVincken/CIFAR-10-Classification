@@ -27,24 +27,24 @@ learning_rate = 0.0001
 momentum = 0.9
 betas = (0.9, 0.99)
 epsilon = 1e-8
-batch_size = 64
-epochs = 10
+batch_size = 128
+epochs = 20
 L2 = 0.005
 augment = True
 weights_init = None
 model_complexity = 'large'
 optimizer = 'adam'
 model = 'resnet-18'
-version = '12.3'
+version = ''
 scheduler = 'ReduceLROnPlateau'
 
 if __name__ == '__main__':
     # Set up W&B
     wandb_config = get_wandb_config(model, model_complexity, learning_rate, betas, epsilon, conv_layers, linear_layers,
-                                    pooling, batch_norm, dropout, L2, weights_init, augment, optimizer, scheduler)
+                                    pooling, batch_norm, dropout, L2, weights_init, augment, optimizer, scheduler, batch_size)
 
     wandb.init(project="CIFAR-10-Classification", config=wandb_config, name=version + ' resnet18',
-               notes='same as 12.2 but label smoothing')
+               notes='')
 
     # Set up dataset
     traindata, testdata, trainloader, testloader = get_data(batch_size)
