@@ -1,17 +1,11 @@
-import os
-import numpy as np
-import torch
 import torchvision
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2 as transforms
-from torchvision.transforms.v2 import RandomCrop
 
 mean, std = [0.4914, 0.4822, 0.4465], [0.247, 0.243, 0.261]
-# These values are mostly used by researchers as found to very useful in fast convergence
 img_size = 224
 
 
-# Convert to PyTorch tensor and normalize between [-1, 1], optional data augmentation
 def get_transform(augment=False):
     if augment:
         return transforms.Compose([
@@ -40,7 +34,7 @@ def get_data(batch_size=None):
 
     testdata = torchvision.datasets.CIFAR10(root='./data', train=False,
                                             download=True, transform=get_transform(augment=False))
-    testloader = DataLoader(testdata, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
+    testloader = DataLoader(testdata, batch_size=64, shuffle=False, num_workers=2, pin_memory=True)
 
     return traindata, testdata, trainloader, testloader
 
