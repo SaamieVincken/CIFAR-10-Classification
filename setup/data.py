@@ -6,12 +6,6 @@ mean, std = [0.4914, 0.4822, 0.4465], [0.247, 0.243, 0.261]
 img_size = 128
 
 
-def denormalize(tensor, mean, std):
-    for t, m, s in zip(tensor, mean, std):
-        t.mul_(s).add_(m)
-    return tensor
-
-
 def get_transform(augment=False):
     if augment:
         return transforms.Compose([
