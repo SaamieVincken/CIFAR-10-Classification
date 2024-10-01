@@ -12,7 +12,7 @@ dropout = 0.5
 learning_rate = 0.001
 momentum = 0.9
 batch_size = 16
-epochs = 5
+epochs = 10
 augment = True
 weights_init = None
 model_complexity = 'large'
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     traindata, testdata, trainloader, testloader = get_data(batch_size)
     classes = get_labels()
 
-    dataloaders_dict = {'train': trainloader, 'val': testloader}
+    dataloaders_dict = {'training': trainloader, 'validation': testloader}
 
     # Set up model
     if model == 'base':

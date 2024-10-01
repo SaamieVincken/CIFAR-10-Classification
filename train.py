@@ -9,12 +9,14 @@ from setup.config import get_metrics_config, get_device
 accuracy_metric, precision_metric, recall_metric, f1_metric = get_metrics_config(get_device())
 
 
-def train_model(model, dataloaders, criterion, optimizer, classes, num_epochs=5, device='cpu'):
+def train_model(model, dataloaders, criterion, optimizer, classes, num_epochs=5, device='cpu', patience=3):
     best_weights = copy.deepcopy(model.state_dict())
     best_acc = 0.0
+    epochs_no_improve = 0
+    min_delta = 0.001
 
     for epoch in range(num_epochs):
-        for phase in ['train', 'val']:
+        for phase in ['training', 'validation']:
             running_loss = 0.0
             accuracy_metric.reset()
             precision_metric.reset()
@@ -25,7 +27,7 @@ def train_model(model, dataloaders, criterion, optimizer, classes, num_epochs=5,
             correct = torch.zeros(len(classes), dtype=torch.int64)
             total = torch.zeros(len(classes), dtype=torch.int64)
 
-            if phase == 'train':
+            if phase == 'training':
                 model.train()
             else:
                 model.eval()
@@ -34,17 +36,17 @@ def train_model(model, dataloaders, criterion, optimizer, classes, num_epochs=5,
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
-                # zero the parameter gradients
+                # Zero the parameter gradients
                 optimizer.zero_grad()
 
-                with torch.set_grad_enabled(phase == 'train'):
+                with torch.set_grad_enabled(phase == 'training'):
                     outputs = model(inputs)
                     loss = criterion(outputs, labels)
 
                     _, predictions = torch.max(outputs, 1)
 
-                    # backward + optimize for training
-                    if phase == 'train':
+                    # Backward + optimize only if in training phase
+                    if phase == 'training':
                         loss.backward()
                         optimizer.step()
 
@@ -70,41 +72,47 @@ def train_model(model, dataloaders, criterion, optimizer, classes, num_epochs=5,
             epoch_recall = recall_metric.compute().item()
             epoch_f1 = f1_metric.compute().item()
 
-            if phase == 'train':
-                wandb.log({
-                    'epoch': epoch + 1,
-                    'training_loss': epoch_loss,
-                    'training_accuracy': epoch_accuracy,
-                    'training_precision': epoch_precision,
-                    'training_recall': epoch_recall,
-                    'training_f1_score': epoch_f1,
-                })
-            else:
-                wandb.log({
-                    'epoch': epoch + 1,
-                    'validation_loss': epoch_loss,
-                    'validation_accuracy': epoch_accuracy,
-                    'validation_precision': epoch_precision,
-                    'validation_recall': epoch_recall,
-                    'validation_f1_score': epoch_f1,
-                    "predictions": wandb.plot.confusion_matrix(
-                        preds=predicted_labels,
-                        y_true=true_labels,
-                        class_names=classes
-                    )
-                })
+            # Logging metrics
+            metrics = {
+                'epoch': epoch + 1,
+                f'{phase}_loss': epoch_loss,
+                f'{phase}_accuracy': epoch_accuracy,
+                f'{phase}_precision': epoch_precision,
+                f'{phase}_recall': epoch_recall,
+                f'{phase}_f1_score': epoch_f1,
+            }
 
-            # Log per-class accuracy only for validation
+            # Per class accuracy
             for i, class_name in enumerate(classes):
-                wandb.log({f'Accuracy/{class_name}': per_class_accuracy[i].item()})
+                metrics[f'{phase}_accuracy/{class_name}'] = per_class_accuracy[i].item()
 
-            # deep copy the model
-            if phase == 'val' and epoch_accuracy > best_acc:
+            # Confusion matrix only for the validation phase
+            if phase == 'validation':
+                metrics["predictions"] = wandb.plot.confusion_matrix(
+                    preds=predicted_labels,
+                    y_true=true_labels,
+                    class_names=classes
+                )
+
+            wandb.log(metrics)
+
+            # Early stopping check
+            if phase == 'validation' and epoch_accuracy > best_acc + min_delta:
                 best_acc = epoch_accuracy
                 best_weights = copy.deepcopy(model.state_dict())
+                epochs_no_improve = 0  # Reset the counter when improving
+            elif phase == 'validation':
+                epochs_no_improve += 1
 
-    # load best model weights
+            # Early stopping
+            if epochs_no_improve >= patience:
+                print(f"Early stopping triggered after {patience} epochs with no improvement.")
+                model.load_state_dict(best_weights)
+                return model
+
+    # Load best model weights
     model.load_state_dict(best_weights)
+    return model
 
 
 def set_parameter_requires_grad(model, feature_extracting):
@@ -118,4 +126,3 @@ def update_metrics(outputs, labels):
     precision_metric.update(outputs, labels)
     recall_metric.update(outputs, labels)
     f1_metric.update(outputs, labels)
-

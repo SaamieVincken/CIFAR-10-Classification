@@ -3,7 +3,13 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import v2 as transforms
 
 mean, std = [0.4914, 0.4822, 0.4465], [0.247, 0.243, 0.261]
-img_size = 224
+img_size = 128
+
+
+def denormalize(tensor, mean, std):
+    for t, m, s in zip(tensor, mean, std):
+        t.mul_(s).add_(m)
+    return tensor
 
 
 def get_transform(augment=False):
@@ -34,7 +40,7 @@ def get_data(batch_size=None):
 
     testdata = torchvision.datasets.CIFAR10(root='./data', train=False,
                                             download=True, transform=get_transform(augment=False))
-    testloader = DataLoader(testdata, batch_size=64, shuffle=False, num_workers=2, pin_memory=True)
+    testloader = DataLoader(testdata, batch_size=batch_size, shuffle=False, num_workers=2, pin_memory=True)
 
     return traindata, testdata, trainloader, testloader
 
