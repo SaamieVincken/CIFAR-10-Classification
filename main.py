@@ -1,6 +1,7 @@
 import torch.optim as optim
 from torchvision.models import  ResNet18_Weights, resnet18
 import wandb
+from gradcam import run_gradcam
 from setup.config import get_wandb_config, get_device
 from setup.base_model import BaseCNN
 import torch.nn as nn
@@ -54,3 +55,4 @@ if __name__ == '__main__':
     optimizer = optim.SGD(params_to_update, lr=learning_rate, momentum=momentum)
     criterion = nn.CrossEntropyLoss()
     train_model(model, dataloaders_dict, criterion, optimizer, classes, num_epochs=epochs, device=device)
+    run_gradcam(model, testloader, device, classes)
