@@ -9,7 +9,7 @@ from setup.config import get_metrics_config, get_device
 accuracy_metric, precision_metric, recall_metric, f1_metric = get_metrics_config(get_device())
 
 
-def train_model(model, dataloaders, criterion, optimizer, classes, num_epochs=5, device='cpu', patience=3):
+def train_model(model, dataloaders, criterion, optimizer, classes, num_epochs=5, device='cpu', patience=3, fold=0):
     best_weights = copy.deepcopy(model.state_dict())
     best_acc = 0.0
     epochs_no_improve = 0
@@ -36,7 +36,6 @@ def train_model(model, dataloaders, criterion, optimizer, classes, num_epochs=5,
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
-                # Zero the parameter gradients
                 optimizer.zero_grad()
 
                 with torch.set_grad_enabled(phase == 'training'):
@@ -45,7 +44,6 @@ def train_model(model, dataloaders, criterion, optimizer, classes, num_epochs=5,
 
                     _, predictions = torch.max(outputs, 1)
 
-                    # Backward + optimize only if in training phase
                     if phase == 'training':
                         loss.backward()
                         optimizer.step()
@@ -56,13 +54,11 @@ def train_model(model, dataloaders, criterion, optimizer, classes, num_epochs=5,
                     true_labels.extend(labels.cpu().numpy())
                     predicted_labels.extend(predictions.cpu().numpy())
 
-                    # Count correct predictions and total instances per class
                     for i in range(len(classes)):
                         class_mask = (labels == i)
                         correct[i] += (predictions[class_mask] == i).sum().item()
                         total[i] += class_mask.sum().item()
 
-            # Calculate per-class accuracy
             per_class_accuracy = correct.float() / total.float()
             per_class_accuracy[total == 0] = 0
 
@@ -72,21 +68,19 @@ def train_model(model, dataloaders, criterion, optimizer, classes, num_epochs=5,
             epoch_recall = recall_metric.compute().item()
             epoch_f1 = f1_metric.compute().item()
 
-            # Logging metrics
             metrics = {
+                'fold': fold + 1,  # Log fold number
                 'epoch': epoch + 1,
-                f'{phase}_loss': epoch_loss,
-                f'{phase}_accuracy': epoch_accuracy,
-                f'{phase}_precision': epoch_precision,
-                f'{phase}_recall': epoch_recall,
-                f'{phase}_f1_score': epoch_f1,
+                f'{fold}_{phase}_loss': epoch_loss,
+                f'{fold}_{phase}_accuracy': epoch_accuracy,
+                f'{fold}_{phase}_precision': epoch_precision,
+                f'{fold}_{phase}_recall': epoch_recall,
+                f'{fold}_{phase}_f1_score': epoch_f1,
             }
 
-            # Per class accuracy
             for i, class_name in enumerate(classes):
                 metrics[f'{phase}_accuracy/{class_name}'] = per_class_accuracy[i].item()
 
-            # Confusion matrix only for the validation phase
             if phase == 'validation':
                 metrics["predictions"] = wandb.plot.confusion_matrix(
                     preds=predicted_labels,
@@ -96,23 +90,20 @@ def train_model(model, dataloaders, criterion, optimizer, classes, num_epochs=5,
 
             wandb.log(metrics)
 
-            # Early stopping check
             if phase == 'validation' and epoch_accuracy > best_acc + min_delta:
                 best_acc = epoch_accuracy
                 best_weights = copy.deepcopy(model.state_dict())
-                epochs_no_improve = 0  # Reset the counter when improving
+                epochs_no_improve = 0
             elif phase == 'validation':
                 epochs_no_improve += 1
 
-            # Early stopping
             if epochs_no_improve >= patience:
                 print(f"Early stopping triggered after {patience} epochs with no improvement.")
                 model.load_state_dict(best_weights)
                 return model
 
-    # Load best model weights
     model.load_state_dict(best_weights)
-    return model
+    return model, best_acc
 
 
 def set_parameter_requires_grad(model, feature_extracting):
