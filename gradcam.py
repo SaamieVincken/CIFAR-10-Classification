@@ -1,10 +1,8 @@
 import torch
-from matplotlib import pyplot as plt
 from torchcam.methods import GradCAM
 from torchcam.utils import overlay_mask
 from torchvision.transforms.functional import to_pil_image
 import wandb
-from torchvision import transforms
 
 
 def unnormalize(image, mean, std):

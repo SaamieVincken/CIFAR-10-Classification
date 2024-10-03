@@ -1,8 +1,6 @@
 import copy
-import time
 import torch
 import wandb
-import torchmetrics
 from setup.config import get_metrics_config, get_device
 
 # Initialize metrics
