@@ -1,12 +1,13 @@
 import torch.optim as optim
-from torchvision.models import  ResNet18_Weights, resnet18
+from torchvision.models import ResNet18_Weights, resnet18
 import wandb
-from gradcam import run_gradcam
+from processing.gradcam import run_gradcam
 from setup.config import get_wandb_config, get_device
 from setup.base_model import BaseCNN
 import torch.nn as nn
 from setup.data import get_data, get_labels
-from train import set_parameter_requires_grad, train_model
+from processing.train import set_parameter_requires_grad, train_model
+
 
 # Settings for model and fine-tuning
 dropout = 0.5
@@ -25,8 +26,10 @@ feature_extract = False
 
 if __name__ == '__main__':
     # Set up W&B
-    wandb_config = get_wandb_config(model, model_complexity, learning_rate, betas=None, epsilon=None, conv_layers=None, linear_layers=None,
-                                    pooling=None, batch_norm=None, dropout=None, L2=None, weights_init=None, data_augmentation=augment,
+    wandb_config = get_wandb_config(model, model_complexity, learning_rate, betas=None, epsilon=None, conv_layers=None,
+                                    linear_layers=None,
+                                    pooling=None, batch_norm=None, dropout=None, L2=None, weights_init=None,
+                                    data_augmentation=augment,
                                     optimizer=optimizer, scheduler=None, batch_size=batch_size)
 
     wandb.init(project="CIFAR-10-Classification", config=wandb_config, name=version, notes='')

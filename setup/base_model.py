@@ -19,7 +19,6 @@ class BaseCNN(nn.Module):
         self.fcl2 = nn.Linear(512, 256)
         self.fcl3 = nn.Linear(256, 128)
         self.fcl4 = nn.Linear(128, 10)
-
         self._initialize_weights(init_type)
 
     def forward(self, x):
@@ -52,4 +51,3 @@ class BaseCNN(nn.Module):
 
 
 model = BaseCNN()
-
